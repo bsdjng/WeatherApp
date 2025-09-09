@@ -72,3 +72,8 @@ Your application should now be running at `http://localhost:8000`.
 ## Future Improvements
 
 - **Database for weather data**: Currently, I use caching for 1 hour to reduce local API requests. In the future, a database could be added to store weather data permanently. This would allow the app to minimize the number of API requests further, especially given the small API rate limit (25 requests per hour), while still providing historical weather data for users.
+
+---
+## Wireframe
+
+![alt text](image.png)
