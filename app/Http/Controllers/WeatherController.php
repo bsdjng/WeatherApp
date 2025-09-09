@@ -9,12 +9,15 @@ class WeatherController extends Controller
 {
     public function show(Request $request, WeatherService $weather)
     {
+        $defaultLocation = 'Heerenveen';
+
+        $location = $request->input('location', $defaultLocation);
+
         $request->validate([
-            'location' => 'required|string',
+            'location' => 'string',
             'cache' => 'nullable|integer|min:3600',
         ]);
 
-        $location = $request->input('location');
         $cacheSeconds = $request->input('cache', 3600);
 
         try {
@@ -28,6 +31,13 @@ class WeatherController extends Controller
                 'endTime' => '+5d',
                 'units' => 'metric',
             ]);
+
+            $forecastHourly = $weather->forecastHourlyCached($location, $cacheSeconds, [
+                'timesteps' => '1h',
+                'startTime' => 'now',
+                'endTime' => '+24h',
+                'units' => 'metric',
+            ]);
         } catch (\Exception $e) {
             return response()->json([
                 'error' => 'Unable to fetch weather',
@@ -39,6 +49,8 @@ class WeatherController extends Controller
             'weather' => $realtime['data']['values'],
             'location' => $realtime['location'],
             'forecast' => $forecast['timelines']['daily'] ?? [],
+            'forecastHourly' => $forecastHourly['timelines']['hourly'] ?? [],
         ]);
     }
+
 }

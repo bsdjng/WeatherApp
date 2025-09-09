@@ -10,6 +10,7 @@ window.L = L;
 
 
 document.addEventListener("DOMContentLoaded", () => {
+
     // Map
     const mapEl = document.getElementById("map");
     if (mapEl) {
@@ -99,13 +100,11 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // Dropdown
-    const toggleButtons = document.querySelectorAll("[data-toggle]");
-    toggleButtons.forEach(btn => {
-        btn.addEventListener("click", () => {
-            const targetId = btn.getAttribute("data-toggle");
-            const targetEl = document.getElementById(targetId);
-            if (targetEl) targetEl.classList.toggle("hidden");
-        });
-    });
+    // Wind Arrow
+    const windArrow = document.getElementById("wind-arrow");
+    if (windArrow) {
+        const windDirection = parseFloat(windArrow.dataset.deg || 0);
+        windArrow.style.transform = `rotate(${windDirection + 180}deg)`;
+        windArrow.style.transition = "transform 0.3s ease-in-out";
+    }
 });

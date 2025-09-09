@@ -16,6 +16,7 @@ class WeatherService
         $this->baseUri = rtrim(config('services.tomorrow.base_uri', 'https://api.tomorrow.io/v4'), '/');
     }
 
+    // realtime forecast
     public function realtime(string $location, array $opts = []): array
     {
         $endpoint = $this->baseUri . '/weather/realtime';
@@ -39,7 +40,7 @@ class WeatherService
         throw new \Exception("Tomorrow.io Realtime API request failed {$response->status()} {$response->body()}");
     }
 
-    public function realtimeCached(string $location, int $seconds = 60, array $opts = []): array
+    public function realtimeCached(string $location, int $seconds = 3600, array $opts = []): array
     {
         $key = 'tomorrow:realtime:' . md5($location . json_encode($opts));
 
@@ -48,20 +49,14 @@ class WeatherService
         });
     }
 
-    /**
-     * Forecast (hourly/daily).
-     *
-     * @param string $location
-     * @param array $opts
-     *        Example: ['timesteps' => '1d', 'startTime' => 'now', 'endTime' => '+5d']
-     */
+    // 5 day forecast
     public function forecast(string $location, array $opts = []): array
     {
         $endpoint = $this->baseUri . '/weather/forecast';
 
         $params = array_merge([
             'location' => $location,
-            'timesteps' => $opts['timesteps'] ?? '1d', // daily by default
+            'timesteps' => $opts['timesteps'] ?? '1d',
             'units' => $opts['units'] ?? 'metric',
         ], $opts);
 
@@ -79,15 +74,51 @@ class WeatherService
         throw new \Exception("Tomorrow.io Forecast API failed {$response->status()} {$response->body()}");
     }
 
-    /**
-     * Cached forecast wrapper.
-     */
-    public function forecastCached(string $location, int $seconds = 300, array $opts = []): array
+    public function forecastCached(string $location, int $seconds = 3600, array $opts = []): array
     {
         $key = 'tomorrow:forecast:' . md5($location . json_encode($opts));
 
         return Cache::remember($key, now()->addSeconds($seconds), function () use ($location, $opts) {
             return $this->forecast($location, $opts);
+        });
+    }
+
+    // 24 hour forecast
+    public function forecastHourly(string $location, array $opts = []): array
+    {
+        $endpoint = $this->baseUri . '/weather/forecast';
+
+        $params = array_merge([
+            'location' => $location,
+            'timesteps' => '1h',
+            'units' => $opts['units'] ?? 'metric',
+        ], $opts);
+
+        $response = Http::retry(3, 200)
+            ->withHeaders([
+                'Accept' => 'application/json',
+                'apikey' => $this->apiKey,
+            ])
+            ->get($endpoint, $params);
+
+        if ($response->successful()) {
+            $data = $response->json();
+            if (isset($data['timelines']['hourly'])) {
+                $data['timelines']['hourly'] = array_slice($data['timelines']['hourly'], 0, 24);
+            }
+            return $data;
+        }
+
+        throw new \Exception("Tomorrow.io Hourly Forecast API failed {$response->status()} {$response->body()}");
+    }
+
+
+    public function forecastHourlyCached(string $location, int $seconds = 3600, array $opts = []): array
+    {
+        $key = 'tomorrow:forecast-hourly:' . md5($location . json_encode($opts));
+
+        return Cache::remember($key, now()->addSeconds($seconds), function () use ($location, $opts) {
+            return $this->forecastHourly($location, $opts);
         });
     }
 }
